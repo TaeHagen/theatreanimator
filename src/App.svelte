@@ -1,107 +1,141 @@
 <script lang="ts">
+import { interval } from "rxjs";
+
 import { onMount } from "svelte";
-import { getPixelsOnLine, HSVtoRGB } from "./utils";
+import { HistoryManager } from "./HistoryManager";
+import { Painting } from "./Painting";
+import { PaintingViewPrinter } from "./PaintingViewPrinter";
+import type { Path } from "./Path";
+import { PathCreatePrinter } from "./PathCreatePrinter";
+import { getPixelsOnLine } from "./utils";
 
 
 	let canvas: HTMLCanvasElement;
-	let ctx: CanvasRenderingContext2D;
+	let previewCanvas: HTMLCanvasElement;
+	let image: HTMLImageElement;
 
-	let points: number[][] = [];
+	let lastX: number = null;
+	let lastY: number = null;
 
+	let painting = new Painting();
+	let printer: PathCreatePrinter;
+	let previewPrinter: PaintingViewPrinter;
+
+	let historyManager = new HistoryManager();
+
+	let currentPath: Path;
+	$: currentPath, printer != null ? printer.currentPath = currentPath : null
+
+	let animationFrame: number = -1;
+	let animationStart: number = -1;
+
+	let strokeWidth = 10;
+	
 	onMount(() => {
-		ctx = canvas.getContext('2d');
+		printer = new PathCreatePrinter(canvas);
+		previewPrinter = new PaintingViewPrinter(previewCanvas);
+		previewPrinter.painting = painting;
+		previewPrinter.image = image;
 	})
 
-	const createPoint = (x: number, y: number, timeValue: number) => [x, y, timeValue];
-
-	const parsePointX = (point: number[]) => point[0];
-
-	const parsePointY = (point: number[]) => point[1];
-	
-	const parsePointTime = (point: number[]) => point[2];
-
-	const findDist = (x1: number, x2: number, y1: number, y2: number) => Math.sqrt(Math.abs(x2-x1)**2 + Math.abs(y2-y1)**2);
-
-	const findClosestPoint = (pointX: number, pointY: number) => {
-		if (points.length == 0)
-			return null;
-		let prev = points[0];
-		let prevX: number;
-		let prevY: number;
-		let prevDist: number;
-		const updatePrevValues = () => {
-			prevX = parsePointX(prev);
-			prevY = parsePointY(prev);
-			prevDist = findDist(prevX, pointX, prevY, pointY);
-		}
-		updatePrevValues();
-		for (const point of points) {
-			const X = parsePointX(point);
-			const Y = parsePointY(point);
-			const dist = findDist(X, pointX, Y, pointY);
-			if (dist < prevDist) {
-				prev = point;
-				updatePrevValues();
-			}
-		}
-		return prev;
-	}
-
-	let lastPoint = null;
-
-	const addPoint = (x: number, y: number) => {
-		// something is pressed
-		if (lastPoint == null) {
-			lastPoint = findClosestPoint(x, y);
-		}
-		if (lastPoint != null) {
-			const lpX = parsePointX(lastPoint)
-			const lpY = parsePointY(lastPoint)
-			if (lpX == x && lpY == y) {
-				return;
-			}
-		}
-		const point = createPoint(x, y, lastPoint != null ? parsePointTime(lastPoint)+1 : 0);
-		points.push(point);
-		lastPoint = point;
-
-		if (parsePointX(point) != x)
-			debugger;
-
-
-		const pointTime = parsePointTime(point);
-		const color = HSVtoRGB(pointTime / 1000, 1, 1);
-		ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, 255)`;
-		ctx.fillRect( x, y, 1, 1 );
-	}
-
-	let lastX = null;
-	let lastY = null;
-
 	const mouseMove = (e) => {
+		if (currentPath == null) {
+			return;
+		}
 		let rect = canvas.getBoundingClientRect();
 		const x = e.clientX - rect.left;
 		const y = e.clientY - rect.top;
 		if (e.buttons != 0) {
-			if (e.shiftKey) {
-				return;
-			}
 			if (lastX != null) {
-				getPixelsOnLine(lastX, lastY, x, y, addPoint);
+				getPixelsOnLine(lastX, lastY, x, y, (x1, y1) => currentPath.addPoint(x1, y1, strokeWidth));
 			}
 			lastX = x;
 			lastY = y;
 		} else {
-			lastPoint = null;
+			if (lastX != null) {
+				historyManager.pushState(currentPath.finishTransaction());
+			}
+			currentPath.strokeDone();
 			lastX = null;
+		}
+	}
+
+	document.onkeydown = e => {
+		if (e.target !== document.body) return; // don't capture when in text fields
+		if (e.ctrlKey) {
+			switch (e.key) {
+				case "z":
+					historyManager.undo();
+					break;
+				case "Z":
+				case "y":
+					historyManager.redo();
+					break;
+			}
 		}
 	}
 </script>
 
 <main>
+	<div>
+		{#if animationFrame == -1}
+			<button on:click={() => {
+				previewPrinter.prepare();
+				animationStart = -1;
+				const nextFrame = () => animationFrame = window.requestAnimationFrame(t => {
+					if (animationStart == -1)
+						animationStart = t
+					previewPrinter.second = (t - animationStart) / 1000;
+					if (previewPrinter.drawNextFrame()) {
+						nextFrame()
+					} else {
+						animationFrame = -1;
+					}
+				})
+				nextFrame();
+			}}>Play</button>
+		{:else}
+			<button on:click={() => {
+				window.cancelAnimationFrame(animationFrame);
+				animationFrame = -1
+			}}>Stop</button>
+		{/if}
+		<select value={currentPath?.id ?? -1} on:change={e => {
+			const value = e.currentTarget.value;
+			if (value == "-1") {
+				currentPath = null;
+			} else if (value == "-2") {
+				currentPath = painting.addPath();
+			} else {
+				currentPath = painting.paths.find(p => p.id == parseInt(value))
+			}
+			painting = painting; // refresh
+		}}>
+			{#each painting.paths as path}
+				<option value={path.id}>
+					{path.name}
+				</option>
+			{/each}
+			<option value={-1}></option>
+			<option value={-2}>Add Path</option>
+		</select>
+		{#if currentPath != null}
+			<input type="text" bind:value={currentPath.name} on:change={() => painting = painting} />
+			<button on:click={() => {
+				painting.paths.splice(painting.paths.indexOf(currentPath), 1)
+				currentPath = null;
+				painting = painting
+			}}>Delete path</button>
+			<input type="range" min="1" max="500" bind:value={currentPath.pointsPerSecond} />
+		{/if}
+		<input type="range" min="1" max="20" bind:value={strokeWidth} />
+	</div>
 	<div class="overlay">
-		<img src="treeoutlines.png" />
+		<img src="treeoutlines.png" bind:this={image} />
 		<canvas width="486" height="743" bind:this={canvas} on:mousemove={mouseMove} />
+	</div>
+	<div>
+		<canvas width="486" height="743" bind:this={previewCanvas} />
 	</div>
 </main>
 
@@ -113,12 +147,11 @@ import { getPixelsOnLine, HSVtoRGB } from "./utils";
 	.overlay > canvas {
 		position: absolute;
 		left: 0;
+		opacity: 0.5;
 	}
 	main {
-		text-align: center;
-		padding: 1em;
-		max-width: 240px;
-		margin: 0 auto;
+		display: flex;
+		justify-content: center;
 	}
 
 	h1 {
