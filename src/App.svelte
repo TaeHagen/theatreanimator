@@ -4,10 +4,13 @@ import { interval } from "rxjs";
 import { onMount } from "svelte";
 import { HistoryManager } from "./HistoryManager";
 import { Painting } from "./Painting";
+import { PaintingKeyframe } from "./PaintingKeyframe";
 import { PaintingViewPrinter } from "./PaintingViewPrinter";
 import type { Path } from "./Path";
 import { PathCreatePrinter } from "./PathCreatePrinter";
 import { getPixelsOnLine } from "./utils";
+import { PointUtils } from "./Point";
+import PointView from "./PointView.svelte";
 
 
 	let canvas: HTMLCanvasElement;
@@ -26,8 +29,12 @@ import { getPixelsOnLine } from "./utils";
 	let currentPath: Path;
 	$: currentPath, printer != null ? printer.currentPath = currentPath : null
 
+	if (painting.paths.length > 0 && currentPath == null) {
+		currentPath = painting.paths[0];
+	}
+
 	let animationFrame: number = -1;
-	let animationStart: number = -1;
+	let lastFrame: number = -1;
 
 	let strokeWidth = 10;
 	
@@ -38,19 +45,22 @@ import { getPixelsOnLine } from "./utils";
 		previewPrinter.image = image;
 	})
 
+	let mouseX = 0;
+	let mouseY = 0;
+
 	const mouseMove = (e) => {
 		if (currentPath == null) {
 			return;
 		}
 		let rect = canvas.getBoundingClientRect();
-		const x = e.clientX - rect.left;
-		const y = e.clientY - rect.top;
+		mouseX = e.clientX - rect.left;
+		mouseY = e.clientY - rect.top;
 		if (e.buttons != 0) {
 			if (lastX != null) {
-				getPixelsOnLine(lastX, lastY, x, y, (x1, y1) => currentPath.addPoint(x1, y1, strokeWidth));
+				getPixelsOnLine(lastX, lastY, mouseX, mouseY, (x1, y1) => currentPath.addPoint(x1, y1, strokeWidth));
 			}
-			lastX = x;
-			lastY = y;
+			lastX = mouseX;
+			lastY = mouseY;
 		} else {
 			if (lastX != null) {
 				historyManager.pushState(currentPath.finishTransaction());
@@ -71,6 +81,11 @@ import { getPixelsOnLine } from "./utils";
 				case "y":
 					historyManager.redo();
 					break;
+				case "k":
+					if (currentPath == null)
+						return;
+					currentPath.addKeyframe(mouseX, mouseY, strokeWidth);
+					break;
 			}
 		}
 	}
@@ -81,16 +96,19 @@ import { getPixelsOnLine } from "./utils";
 		{#if animationFrame == -1}
 			<button on:click={() => {
 				previewPrinter.prepare();
-				animationStart = -1;
+				lastFrame = -1;
 				const nextFrame = () => animationFrame = window.requestAnimationFrame(t => {
-					if (animationStart == -1)
-						animationStart = t
-					previewPrinter.second = (t - animationStart) / 1000;
-					if (previewPrinter.drawNextFrame()) {
-						nextFrame()
+					if (lastFrame != -1) {
+						if (previewPrinter.drawNextFrame((t - lastFrame) / 1000)) {
+							nextFrame()
+						} else {
+							animationFrame = -1;
+						}
 					} else {
-						animationFrame = -1;
+						lastFrame = t
+						nextFrame();
 					}
+					lastFrame = t
 				})
 				nextFrame();
 			}}>Play</button>
@@ -133,6 +151,7 @@ import { getPixelsOnLine } from "./utils";
 	<div class="overlay">
 		<img src="treeoutlines.png" bind:this={image} />
 		<canvas width="486" height="743" bind:this={canvas} on:mousemove={mouseMove} />
+		<PointView path={currentPath} /> 
 	</div>
 	<div>
 		<canvas width="486" height="743" bind:this={previewCanvas} />

@@ -1,4 +1,5 @@
 import type { Painting } from "./Painting";
+import type { Path } from "./Path";
 import { Point, PointUtils } from "./Point";
 
 export class PaintingViewPrinter {
@@ -11,11 +12,11 @@ export class PaintingViewPrinter {
 
     alreadyPainted: Point[] = [];
     totalPoints = 0;
+    pathProgress = new Map<Path, number>();
 
-    second = 0;
-
-    drawNextFrame(): boolean {
-        const points = this.pointsForPaths();
+    drawNextFrame(secSinceLastFrame: number): boolean {
+        console.log(secSinceLastFrame);
+        const points = this.pointsForPaths(secSinceLastFrame);
         if (this.alreadyPainted.length == this.totalPoints)
             return false;
 
@@ -38,14 +39,20 @@ export class PaintingViewPrinter {
         return true;
     }
 
-    pointsForPaths() {
-        return this.painting.paths.map(path => path.points.filter(p => PointUtils.parsePointTime(p) / path.pointsPerSecond <= this.second && !this.alreadyPainted.includes(p)));
+    pointsForPaths(secSinceLastFrame: number) {
+        return this.painting.paths.map(path => {
+            let prog = this.pathProgress.get(path) ?? 0;
+            prog += secSinceLastFrame * path.pointsPerSecond;
+            this.pathProgress.set(path, prog);
+            return path.points.filter(p => PointUtils.parsePointTime(p) <= prog && !this.alreadyPainted.includes(p));
+        });
     }
 
     prepare() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.alreadyPainted = [];
         this.totalPoints = this.painting.paths.reduce((prev, curr) => prev + curr.points.length, 0);
+        this.pathProgress.clear();
     }
 
     drawPoint(point: Point) {

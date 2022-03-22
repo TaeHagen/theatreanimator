@@ -1,7 +1,8 @@
 import type { Subscription } from "rxjs";
+import type { PaintingKeyframe } from "./PaintingKeyframe";
 import type { Path } from "./Path";
 import { Point, PointUtils } from "./Point";
-import { HSVtoRGB } from "./utils";
+import { drawDiamond, HSVtoRGB } from "./utils";
 
 export class PathCreatePrinter {
     private ctx: CanvasRenderingContext2D;

@@ -1,5 +1,6 @@
 import { Subject } from "rxjs";
 import type { UndoState } from "./HistoryManager";
+import { PaintingKeyframe } from "./PaintingKeyframe";
 import { Point, PointUtils } from "./Point";
 import { HSVtoRGB } from "./utils";
 
@@ -12,12 +13,17 @@ export class Path {
 
     points: Point[] = [];
 	transaction: Point[] = [];
+	keyframes: PaintingKeyframe[] = [];
 
 	pointsPerSecond: number = 250;
 
 	findDist(x1: number, x2: number, y1: number, y2: number) {
         return Math.sqrt(Math.abs(x2-x1)**2 + Math.abs(y2-y1)**2);
     }
+
+	applyKeyframesForPoint(point: number) {
+		this.keyframes.filter(k => PointUtils.parsePointTime(k.point) <= point).map(k => k.apply(this));
+	}
 
 	findClosestPoint(pointX: number, pointY: number) {
 		if (this.points.length == 0)
@@ -47,6 +53,7 @@ export class Path {
 	lastPoint: Point = null;
 
 	newPoint$ = new Subject<Point>();
+	newKeyframe$ = new Subject<PaintingKeyframe>();
 	changed$ = new Subject<void>(); // the whole thing needs to be redrawn
 
 	addPoint(x: number, y: number, brushSize: number) {
@@ -65,6 +72,14 @@ export class Path {
 		this.lastPoint = point;
 
 		this.newPoint$.next(point);
+	}
+
+	addKeyframe(x: number, y: number, brushSize: number) {
+		const keyframe = new PaintingKeyframe(
+			PointUtils.createPoint(x, y, this.lastPoint != null ? PointUtils.parsePointTime(this.lastPoint)+1 : 0, brushSize)
+		);
+		this.keyframes.push(keyframe);
+		this.newKeyframe$.next(keyframe);
 	}
 
 	finishTransaction(): UndoState {

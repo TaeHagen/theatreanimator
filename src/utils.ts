@@ -39,3 +39,25 @@ export function getPixelsOnLine(x1, y1, x0, y0, cb){
       if (e2 < dx) { err += dx; y0  += sy; }
    }
 }
+
+export function drawDiamond(context, x, y, width, height){
+    context.save();
+            context.beginPath();
+            context.moveTo(x, y);
+            
+            // top left edge
+            context.lineTo(x - width / 2, y + height / 2);
+            
+            // bottom left edge
+            context.lineTo(x, y + height);
+            
+            // bottom right edge
+            context.lineTo(x + width / 2, y + height / 2);
+            
+            // closing the path automatically creates
+            // the top right edge
+            context.closePath();
+            
+            context.fill();
+    context.restore();
+        }

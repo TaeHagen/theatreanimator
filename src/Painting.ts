@@ -1,7 +1,7 @@
 import { Path } from "./Path";
 
 export class Painting {
-    paths: Path[] = [];
+    paths: Path[] = [new Path()];
 
     addPath() {
         const path = new Path();
