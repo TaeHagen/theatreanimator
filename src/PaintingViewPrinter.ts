@@ -15,7 +15,7 @@ export class PaintingViewPrinter {
     pathProgress = new Map<Path, number>();
 
     drawNextFrame(secSinceLastFrame: number): boolean {
-        console.log(secSinceLastFrame);
+        this.secSinceStart += secSinceLastFrame;
         const points = this.pointsForPaths(secSinceLastFrame);
         if (this.alreadyPainted.length == this.totalPoints)
             return false;
@@ -39,13 +39,18 @@ export class PaintingViewPrinter {
         return true;
     }
 
+    secSinceStart = 0;
+
     pointsForPaths(secSinceLastFrame: number) {
         return this.painting.paths.map(path => {
+            if (this.secSinceStart < path.delay/1000)
+                return null;
             let prog = this.pathProgress.get(path) ?? 0;
-            prog += secSinceLastFrame * path.pointsPerSecond;
+            prog += secSinceLastFrame * path.effectivePointsPerSeconds;
             this.pathProgress.set(path, prog);
+            path.applyKeyframesForPoint(prog);
             return path.points.filter(p => PointUtils.parsePointTime(p) <= prog && !this.alreadyPainted.includes(p));
-        });
+        }).filter(p => p != null);
     }
 
     prepare() {
@@ -53,6 +58,7 @@ export class PaintingViewPrinter {
         this.alreadyPainted = [];
         this.totalPoints = this.painting.paths.reduce((prev, curr) => prev + curr.points.length, 0);
         this.pathProgress.clear();
+        this.secSinceStart = 0;
     }
 
     drawPoint(point: Point) {

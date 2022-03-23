@@ -8,9 +8,10 @@ import { PaintingKeyframe } from "./PaintingKeyframe";
 import { PaintingViewPrinter } from "./PaintingViewPrinter";
 import type { Path } from "./Path";
 import { PathCreatePrinter } from "./PathCreatePrinter";
-import { getPixelsOnLine } from "./utils";
+import { asAny, getPixelsOnLine, readFile, saveData } from "./utils";
 import { PointUtils } from "./Point";
 import PointView from "./PointView.svelte";
+import { FrameByFrameCanvasRecorder } from "./recorder";
 
 
 	let canvas: HTMLCanvasElement;
@@ -23,25 +24,32 @@ import PointView from "./PointView.svelte";
 	let painting = new Painting();
 	let printer: PathCreatePrinter;
 	let previewPrinter: PaintingViewPrinter;
+	$: previewPrinter != null ? previewPrinter.painting = painting : null
 
 	let historyManager = new HistoryManager();
 
 	let currentPath: Path;
 	$: currentPath, printer != null ? printer.currentPath = currentPath : null
 
-	if (painting.paths.length > 0 && currentPath == null) {
-		currentPath = painting.paths[0];
+	const chooseFirstPath = () => {
+		if (painting.paths.length > 0) {
+			currentPath = painting.paths[0];
+		}
 	}
+	chooseFirstPath();
 
 	let animationFrame: number = -1;
 	let lastFrame: number = -1;
 
 	let strokeWidth = 10;
+
+	let erasing = false;
+
+	let saveFile = saveData();
 	
-	onMount(() => {
+	onMount(async () => {
 		printer = new PathCreatePrinter(canvas);
 		previewPrinter = new PaintingViewPrinter(previewCanvas);
-		previewPrinter.painting = painting;
 		previewPrinter.image = image;
 	})
 
@@ -57,7 +65,7 @@ import PointView from "./PointView.svelte";
 		mouseY = e.clientY - rect.top;
 		if (e.buttons != 0) {
 			if (lastX != null) {
-				getPixelsOnLine(lastX, lastY, mouseX, mouseY, (x1, y1) => currentPath.addPoint(x1, y1, strokeWidth));
+				getPixelsOnLine(lastX, lastY, mouseX, mouseY, (x1, y1) => erasing ? currentPath.eraseRadius(x1, y1, strokeWidth) : currentPath.addPoint(x1, y1, strokeWidth));
 			}
 			lastX = mouseX;
 			lastY = mouseY;
@@ -118,6 +126,30 @@ import PointView from "./PointView.svelte";
 				animationFrame = -1
 			}}>Stop</button>
 		{/if}
+		<button on:click={() => {
+			erasing = !erasing;
+		}}>{erasing ? "Erasing" : "Drawing"}</button>
+		<button on:click={() => {
+			var json = JSON.stringify(painting.flatten()),
+            blob = new Blob([json], {type: "octet/stream"})
+			saveFile(blob, "animation")
+		}}>Save</button>
+		<button on:click={() => {
+			readFile(d => {
+				painting = Painting.restore(d)
+				chooseFirstPath();
+			});
+		}}>Open</button>
+		<button on:click={async () => {
+			const fps = 60;
+			const recorder = new FrameByFrameCanvasRecorder(previewCanvas, fps);
+			previewPrinter.prepare();
+			while(previewPrinter.drawNextFrame(1/fps)) {
+				await recorder.recordFrame()
+			}
+			const blob = await recorder.export();
+			saveFile(blob, "animation.webm")
+		}}>Render</button>
 		<select value={currentPath?.id ?? -1} on:change={e => {
 			const value = e.currentTarget.value;
 			if (value == "-1") {
@@ -145,6 +177,7 @@ import PointView from "./PointView.svelte";
 				painting = painting
 			}}>Delete path</button>
 			<input type="range" min="1" max="500" bind:value={currentPath.pointsPerSecond} />
+			<input type="number" bind:value={currentPath.delay} />
 		{/if}
 		<input type="range" min="1" max="20" bind:value={strokeWidth} />
 	</div>

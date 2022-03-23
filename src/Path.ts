@@ -13,16 +13,43 @@ export class Path {
 
     points: Point[] = [];
 	transaction: Point[] = [];
+	eraseTransaction: Point[] = [];
 	keyframes: PaintingKeyframe[] = [];
 
 	pointsPerSecond: number = 250;
+	effectivePointsPerSeconds: number = this.pointsPerSecond;
+
+	delay: number = 0;
 
 	findDist(x1: number, x2: number, y1: number, y2: number) {
         return Math.sqrt(Math.abs(x2-x1)**2 + Math.abs(y2-y1)**2);
     }
 
 	applyKeyframesForPoint(point: number) {
+		this.effectivePointsPerSeconds = this.pointsPerSecond;
 		this.keyframes.filter(k => PointUtils.parsePointTime(k.point) <= point).map(k => k.apply(this));
+	}
+
+	flatten() {
+		return {
+			points: this.points.map(p => PointUtils.flatten(p)),
+			keyframes: this.keyframes.map(k => k.flatten()),
+			pointsPerSecond: this.pointsPerSecond,
+			name: this.name,
+			id: this.id,
+			delay: this.delay
+		}
+	}
+
+	static restore(data: any) {
+		const path = new Path();
+		path.points = data.points.map(p => PointUtils.restore(p));
+		path.keyframes = data.keyframes.map(k => PaintingKeyframe.restore(k));
+		path.pointsPerSecond = data.pointsPerSecond;
+		path.name = data.name;
+		path.id = data.id;
+		path.delay = data.delay;
+		return path;
 	}
 
 	findClosestPoint(pointX: number, pointY: number) {
@@ -74,9 +101,19 @@ export class Path {
 		this.newPoint$.next(point);
 	}
 
+	eraseRadius(x: number, y: number, brushSize: number) {
+		this.points = this.points.filter(p => {
+			const res = this.findDist(x, PointUtils.parsePointX(p), y, PointUtils.parsePointY(p)) > brushSize;
+			if (!res)
+				this.eraseTransaction.push(p);
+			return res;
+		});
+		this.changed$.next();
+	}
+
 	addKeyframe(x: number, y: number, brushSize: number) {
 		const keyframe = new PaintingKeyframe(
-			PointUtils.createPoint(x, y, this.lastPoint != null ? PointUtils.parsePointTime(this.lastPoint)+1 : 0, brushSize)
+			PointUtils.createPoint(x, y, PointUtils.parsePointTime(this.findClosestPoint(x, y))+1 ?? 0, brushSize)
 		);
 		this.keyframes.push(keyframe);
 		this.newKeyframe$.next(keyframe);
@@ -84,15 +121,17 @@ export class Path {
 
 	finishTransaction(): UndoState {
 		const state = this.transaction;
+		const eraseState = this.eraseTransaction;
 		this.transaction = [];
+		this.eraseTransaction = [];
 		return {
 			name: "Add stroke",
 			undo: () => {
-				this.points = this.points.filter(p => !state.includes(p));
+				this.points = this.points.filter(p => !state.includes(p)).concat(eraseState);
 				this.changed$.next();
 			},
 			redo: () => {
-				this.points = this.points.concat(state);
+				this.points = this.points.concat(state).filter(p => !eraseState.includes(p));
 				this.changed$.next();
 			}
 		}

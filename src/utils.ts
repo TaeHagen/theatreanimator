@@ -61,3 +61,35 @@ export function drawDiamond(context, x, y, width, height){
             context.fill();
     context.restore();
         }
+
+export function saveData () {
+    var a = document.createElement("a");
+    document.body.appendChild(a);
+    a.style.display = "none";
+    return function (blob, fileName) {
+        let url = window.URL.createObjectURL(blob);
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    };
+};
+export function readFile(cb: (data: any) => void) {
+    const input = document.createElement("input");
+    input.style.display = "none";
+    input.type = "file";
+    document.body.appendChild(input);
+    input.click();
+    input.addEventListener('change', () => {
+        var fr=new FileReader();
+        fr.onload=function(){
+            document.body.removeChild(input);
+            cb(JSON.parse(fr.result.toString()));
+        }
+        fr.readAsText(input.files[0]);
+    })
+}
+
+export function asAny(a: any): any {
+    return a;
+}

@@ -15,5 +15,16 @@ export const PointUtils = {
     },
     parseBrushSize(point: Point) {
         return point[3];
+    },
+    flatten(point: Point) {
+        return {
+            x: PointUtils.parsePointX(point),
+            y: PointUtils.parsePointY(point),
+            time: PointUtils.parsePointTime(point),
+            brushSize: PointUtils.parseBrushSize(point),
+        }
+    },
+    restore(data: any): Point {
+        return PointUtils.createPoint(data.x, data.y, data.time, data.brushSize);
     }
 }
