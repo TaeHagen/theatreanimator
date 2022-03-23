@@ -10,14 +10,22 @@ export class PaintingViewPrinter {
     painting: Painting
     image: CanvasImageSource
 
-    alreadyPainted: Point[] = [];
     totalPoints = 0;
     pathProgress = new Map<Path, number>();
+    pathPoints = new Map<Path, Point[]>();
+
+    allDrawn() {
+        for (const points of this.pathPoints.values()){
+            if (points.length > 0)
+                return false;
+        }
+        return true;
+    }
 
     drawNextFrame(secSinceLastFrame: number): boolean {
         this.secSinceStart += secSinceLastFrame;
         const points = this.pointsForPaths(secSinceLastFrame);
-        if (this.alreadyPainted.length == this.totalPoints)
+        if (this.allDrawn())
             return false;
 
         // creates a path, calls drawPoint() to draw any number of points into that path, then clips into it
@@ -49,20 +57,31 @@ export class PaintingViewPrinter {
             prog += secSinceLastFrame * path.effectivePointsPerSeconds;
             this.pathProgress.set(path, prog);
             path.applyKeyframesForPoint(prog);
-            return path.points.filter(p => PointUtils.parsePointTime(p) <= prog && !this.alreadyPainted.includes(p));
+            let points = this.pathPoints.get(path) ?? path.points;
+            let wanted: Point[] = [];
+            points = points.filter(p => {
+                const use = PointUtils.parsePointTime(p) <= prog;
+                if (use)
+                    wanted.push(p)
+                return !use;
+            });
+            this.pathPoints.set(path, points);
+            return wanted;
         }).filter(p => p != null);
     }
 
     prepare() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.alreadyPainted = [];
         this.totalPoints = this.painting.paths.reduce((prev, curr) => prev + curr.points.length, 0);
         this.pathProgress.clear();
         this.secSinceStart = 0;
+        this.pathProgress.clear();
+        for (const path of this.painting.paths) {
+            this.pathPoints.set(path, path.points);
+        }
     }
 
     drawPoint(point: Point) {
         this.ctx.arc(PointUtils.parsePointX(point), PointUtils.parsePointY(point), PointUtils.parseBrushSize(point), 0, 2 * Math.PI);
-        this.alreadyPainted.push(point);
     }
 }

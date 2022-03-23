@@ -84,15 +84,18 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 			switch (e.key) {
 				case "z":
 					historyManager.undo();
+					e.preventDefault();
 					break;
 				case "Z":
 				case "y":
 					historyManager.redo();
+					e.preventDefault();
 					break;
 				case "k":
 					if (currentPath == null)
 						return;
 					currentPath.addKeyframe(mouseX, mouseY, strokeWidth);
+					e.preventDefault();
 					break;
 			}
 		}
@@ -176,14 +179,19 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 				currentPath = null;
 				painting = painting
 			}}>Delete path</button>
-			<input type="range" min="1" max="500" bind:value={currentPath.pointsPerSecond} />
+			<input type="range" min="1" max="1500" bind:value={currentPath.pointsPerSecond} />
 			<input type="number" bind:value={currentPath.delay} />
 		{/if}
 		<input type="range" min="1" max="20" bind:value={strokeWidth} />
 	</div>
-	<div class="overlay">
+	<div class="overlay" style="cursor: {
+		`url('data:image/svg+xml;utf8,<svg stroke="%23000000" fill="transparent" height="${strokeWidth*2}" viewBox="0 0 ${strokeWidth*2} ${strokeWidth*2}" width="${strokeWidth*2}" xmlns="http://www.w3.org/2000/svg"><circle cx="${strokeWidth}" cy="${strokeWidth}" r="${strokeWidth}"/></svg>') ${strokeWidth} ${strokeWidth}, auto`
+	};">
 		<img src="treeoutlines.png" bind:this={image} />
-		<canvas width="486" height="743" bind:this={canvas} on:mousemove={mouseMove} />
+		<canvas width="486" height="743" bind:this={canvas} on:mousemove={mouseMove} on:wheel={e => {
+			strokeWidth += e.deltaY > 0 ? -1 : 1;
+			e.preventDefault()
+		}} />
 		<PointView path={currentPath} /> 
 	</div>
 	<div>
