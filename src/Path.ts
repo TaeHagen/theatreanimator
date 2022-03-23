@@ -16,6 +16,10 @@ export class Path {
 	eraseTransaction: Point[] = [];
 	keyframes: PaintingKeyframe[] = [];
 
+	get clean() {
+		return this.points.length == 0 && this.keyframes.length == 0;
+	}
+
 	pointsPerSecond: number = 250;
 	effectivePointsPerSeconds: number = this.pointsPerSecond;
 

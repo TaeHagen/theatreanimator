@@ -11,8 +11,12 @@ export class Painting {
 
     flatten() {
         return {
-            paths: this.paths.map(p => p.flatten())
+            paths: this.paths.map(p => p.flatten()),
         }
+    }
+
+    get clean() {
+        return this.paths.every(p => p.clean);
     }
 
     static restore(data: any) {

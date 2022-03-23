@@ -74,7 +74,7 @@ export function saveData () {
         window.URL.revokeObjectURL(url);
     };
 };
-export function readFile(cb: (data: any) => void) {
+export function readFile(cb: (data: any, name: string) => void) {
     const input = document.createElement("input");
     input.style.display = "none";
     input.type = "file";
@@ -84,9 +84,20 @@ export function readFile(cb: (data: any) => void) {
         var fr=new FileReader();
         fr.onload=function(){
             document.body.removeChild(input);
-            cb(JSON.parse(fr.result.toString()));
+            cb(JSON.parse(fr.result.toString()), input.files[0].name);
         }
         fr.readAsText(input.files[0]);
+    })
+}
+
+export function readFileBin(cb: (data: File) => void) {
+    const input = document.createElement("input");
+    input.style.display = "none";
+    input.type = "file";
+    document.body.appendChild(input);
+    input.click();
+    input.addEventListener('change', () => {
+        cb(input.files[0]);
     })
 }
 
