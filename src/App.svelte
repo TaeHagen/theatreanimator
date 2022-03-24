@@ -274,7 +274,6 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 		flex-grow: 1;
 	}
 	.image {
-		padding: 10px;
 		margin: auto;
 	}
 	.image > *:first-child {
