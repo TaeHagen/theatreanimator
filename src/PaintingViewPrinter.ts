@@ -39,7 +39,8 @@ export class PaintingViewPrinter {
                 this.drawPoint(point);
 
             this.ctx.clip();
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+            this.ctx.fillStyle = this.painting.backgroundColor;
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
             this.ctx.drawImage(this.image, 0, 0);
             this.ctx.restore();
         }
@@ -71,7 +72,8 @@ export class PaintingViewPrinter {
     }
 
     prepare() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.fillStyle = this.painting.backgroundColor;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         this.totalPoints = this.painting.paths.reduce((prev, curr) => prev + curr.points.length, 0);
         this.pathProgress.clear();
         this.secSinceStart = 0;
