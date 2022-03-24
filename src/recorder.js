@@ -26,7 +26,7 @@ export class FrameByFrameCanvasRecorder {
         track.requestFrame = () => stream.requestFrame();
       }
       // prepare our MediaRecorder
-      const rec = this.recorder = new MediaRecorder(stream);
+      const rec = this.recorder = new MediaRecorder(stream, {bitsPerSecond: 25000000});
       const chunks = this.chunks = [];
       rec.ondataavailable = (evt) => chunks.push(evt.data);
       rec.start();

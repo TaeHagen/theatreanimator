@@ -2,6 +2,7 @@ import { Path } from "./Path";
 
 export class Painting {
     paths: Path[] = [new Path()];
+    backgroundColor: string = "#FFFFFF";
 
     addPath() {
         const path = new Path();
@@ -12,6 +13,7 @@ export class Painting {
     flatten() {
         return {
             paths: this.paths.map(p => p.flatten()),
+            backgroundColor: this.backgroundColor
         }
     }
 
@@ -22,6 +24,7 @@ export class Painting {
     static restore(data: any) {
         const painting = new Painting();
         painting.paths = data.paths.map(p => Path.restore(p));
+        painting.backgroundColor = data.backgroundColor;
         return painting;
     }
 }

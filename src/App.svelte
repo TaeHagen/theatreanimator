@@ -242,6 +242,8 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 		<div class="footer">
 			<span class="miniheader">Brush size</span>
 			<input type="range" min="1" max="20" bind:value={strokeWidth} />
+			<span class="miniheader">Background color</span>
+			<input type="color" bind:value={painting.backgroundColor} />
 		</div>
 	</div>
 	<div class="imagesContainer">
@@ -251,7 +253,7 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 			<img src={currentFileUrl} bind:this={image} on:load={() => {
 				imageWidth = image.width;
 				imageHeight = image.height;
-			}} />
+			}} style="background-color: {painting.backgroundColor}" />
 			<canvas width={imageWidth} height={imageHeight} bind:this={canvas} on:mousemove={mouseMove} on:wheel={e => {
 				strokeWidth += e.deltaY > 0 ? -1 : 1;
 				e.preventDefault()
@@ -259,7 +261,7 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 			<PointView path={currentPath} /> 
 		</div>
 		<div class="image">
-			<canvas width={imageWidth} height={imageHeight} bind:this={previewCanvas} />
+			<canvas width={imageWidth} height={imageHeight} bind:this={previewCanvas} style="background-color: {painting.backgroundColor}" />
 		</div>
 	</div>
 </main>
@@ -275,9 +277,6 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 	}
 	.image {
 		margin: auto;
-	}
-	.image > *:first-child {
-		background-color: white;
 	}
 	.overlay > canvas {
 		position: absolute;
@@ -322,6 +321,19 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
       background: #42A5F5;
 	  box-shadow: -800px 0 0 800px #42A5F5;
     }
+	input[type="color"] {
+		-webkit-appearance: none;
+		border: none;
+		height: 32px;
+		padding: 0;
+	}
+	input[type="color"]::-webkit-color-swatch-wrapper {
+		padding: 0;
+	}
+	input[type="color"]::-webkit-color-swatch {
+		border: none;
+		border-radius: 10px;
+	}
 	.selected {
 		color: #42A5F5 !important;
 	}
