@@ -281,6 +281,7 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 	.overlay > canvas {
 		position: absolute;
 		left: 0;
+		top: 0;
 		opacity: 0.5;
 	}
 	.sidebar {
