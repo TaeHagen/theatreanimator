@@ -257,6 +257,8 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 				<input type="range" min="1" max="1500" bind:value={currentPath.pointsPerSecond} />
 				<span class="miniheader">Start delay (ms)</span>
 				<input type="number" bind:value={currentPath.delay} /><br>
+				<span class="miniheader">Perfect Rendering</span>
+				<input type="checkbox" bind:value={currentPath.perfectRendering} />
 				<button on:click={() => {
 					painting.paths.splice(painting.paths.indexOf(currentPath), 1)
 					currentPath = null;
@@ -265,8 +267,6 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 			{/if}
 		</div>
 		<div class="footer">
-			<span class="miniheader">Brush size</span>
-			<input type="range" min="1" max="20" bind:value={strokeWidth} />
 			<span class="miniheader">Background color</span>
 			<input type="color" bind:value={painting.backgroundColor} />
 			<span class="miniheader">Desired time</span>
