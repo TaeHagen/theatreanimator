@@ -15,6 +15,7 @@ export class Path {
 	transaction: Point[] = [];
 	eraseTransaction: Point[] = [];
 	keyframes: PaintingKeyframe[] = [];
+	perfectRendering = false;
 
 	get clean() {
 		return this.points.length == 0 && this.keyframes.length == 0;
@@ -45,7 +46,8 @@ export class Path {
 			pointsPerSecond: this.pointsPerSecond,
 			name: this.name,
 			id: this.id,
-			delay: this.delay
+			delay: this.delay,
+			perfectRendering: this.perfectRendering
 		}
 	}
 
@@ -57,6 +59,8 @@ export class Path {
 		path.name = data.name;
 		path.id = data.id;
 		path.delay = data.delay;
+		if (data.perfectRendering != null)
+			path.perfectRendering = data.perfectRendering;
 		return path;
 	}
 

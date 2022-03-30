@@ -10,6 +10,7 @@ export class PaintingViewPrinter {
     painting: Painting
     image: CanvasImageSource
     doneImage: CanvasImageSource
+    backgroundImage: CanvasImageSource
 
     allPointsCanvas: HTMLCanvasElement;
 
@@ -44,6 +45,8 @@ export class PaintingViewPrinter {
             ctx.clip();
             ctx.fillStyle = this.painting.backgroundColor;
             ctx.fillRect(0, 0, canvas.width, canvas.height)
+            if (this.backgroundImage != null)
+                this.ctx.drawImage(this.backgroundImage, 0, 0);
             ctx.drawImage(this.image, 0, 0);
             ctx.restore();
         }
@@ -71,17 +74,34 @@ export class PaintingViewPrinter {
         // then draws the background with clip and restores it
         
         for (const path of points) {
-            this.ctx.save();
-            this.ctx.beginPath();
-            
-            for (const point of path)
-                this.drawPoint(point);
-
-            this.ctx.clip();
-            this.ctx.fillStyle = this.painting.backgroundColor;
-            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
-            this.ctx.drawImage(this.image, 0, 0);
-            this.ctx.restore();
+            if (path.perfect) {
+                for (const point of path.points) {
+                    this.ctx.save();
+                    this.ctx.beginPath();
+                    this.drawPoint(point);
+                    this.ctx.clip();
+                    this.ctx.fillStyle = this.painting.backgroundColor;
+                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
+                    if (this.backgroundImage != null)
+                        this.ctx.drawImage(this.backgroundImage, 0, 0);
+                    this.ctx.drawImage(this.image, 0, 0);
+                    this.ctx.restore();
+                }
+            } else {
+                this.ctx.save();
+                this.ctx.beginPath();
+                
+                for (const point of path.points) 
+                    this.drawPoint(point);
+                
+                this.ctx.clip();
+                this.ctx.fillStyle = this.painting.backgroundColor;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
+                if (this.backgroundImage != null)
+                    this.ctx.drawImage(this.backgroundImage, 0, 0);
+                this.ctx.drawImage(this.image, 0, 0);
+                this.ctx.restore();
+            }
         }
         
         return true;
@@ -117,7 +137,10 @@ export class PaintingViewPrinter {
                 return !use;
             });
             this.pathPoints.set(path, points);
-            return wanted;
+            return {
+                points: wanted,
+                perfect: path.perfectRendering
+            }
         }).filter(p => p != null);
     }
 
@@ -135,6 +158,8 @@ export class PaintingViewPrinter {
         if (canvas) {
             this.ctx.fillStyle = this.painting.backgroundColor;
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            if (this.backgroundImage != null)
+                this.ctx.drawImage(this.backgroundImage, 0, 0);
         }
         this.totalPoints = this.painting.paths.reduce((prev, curr) => prev + curr.points.length, 0);
         this.pathProgress.clear();

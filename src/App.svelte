@@ -51,6 +51,12 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 			createImageBitmap(currentDoneFile).then(i => previewPrinter.doneImage = i)
 	}
 
+	let currentBackgroundFile: File;
+	$: {
+		if (currentBackgroundFile != null)
+			createImageBitmap(currentBackgroundFile).then(i => previewPrinter.backgroundImage = i)
+	}
+
 	const chooseFirstPath = () => {
 		if (painting.paths.length > 0) {
 			currentPath = painting.paths[0];
@@ -176,7 +182,12 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 					readFileBin(f => {
 						currentDoneFile = f;
 					})
-				}} title="Open image"><span class="material-icons">verified</span></button>
+				}} title="Open final fade image"><span class="material-icons">verified</span></button>
+				<button on:click={() => {
+					readFileBin(f => {
+						currentBackgroundFile = f;
+					})
+				}} title="Open background image"><span class="material-icons">wallpaper</span></button>
 				<button on:click={() => {
 					var json = JSON.stringify(painting.flatten()),
 					blob = new Blob([json], {type: "octet/stream"})
@@ -246,6 +257,8 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 				<input type="range" min="1" max="1500" bind:value={currentPath.pointsPerSecond} />
 				<span class="miniheader">Start delay (ms)</span>
 				<input type="number" bind:value={currentPath.delay} /><br>
+				<span class="miniheader">Perfect Rendering</span>
+				<input type="checkbox" bind:value={currentPath.perfectRendering} /><br>
 				<button on:click={() => {
 					painting.paths.splice(painting.paths.indexOf(currentPath), 1)
 					currentPath = null;
@@ -254,8 +267,6 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 			{/if}
 		</div>
 		<div class="footer">
-			<span class="miniheader">Brush size</span>
-			<input type="range" min="1" max="20" bind:value={strokeWidth} />
 			<span class="miniheader">Background color</span>
 			<input type="color" bind:value={painting.backgroundColor} />
 			<span class="miniheader">Desired time</span>
@@ -311,7 +322,7 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 		opacity: 0.5;
 	}
 	.sidebar {
-		max-width: 400px;
+		max-width: 450px;
 		background-color: #4d4d4d;
 		padding: 10px;
 		display: flex;
@@ -329,6 +340,10 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 	}
 	.sidebar input {
 		width: 100%;
+	}
+	input[type='checkbox'] {
+		width: auto;
+		margin-left: 5px;
 	}
 
 	input[type='range']::-webkit-slider-runnable-track {
