@@ -12,6 +12,7 @@ export class FrameByFrameCanvasRecorder {
     constructor(source_canvas, FPS = 30) {
     
       this.FPS = FPS;
+      this.frames = 0;
       this.source = source_canvas;
       const canvas = this.canvas = source_canvas.cloneNode();
       const ctx = this.drawingContext = canvas.getContext('2d');
@@ -69,6 +70,7 @@ export class FrameByFrameCanvasRecorder {
       // sleep recorder
       rec.pause();
       await waitForEvent(rec, 'pause');
+      this.frames++;
   
     }
     async export () {
@@ -76,6 +78,7 @@ export class FrameByFrameCanvasRecorder {
       this.recorder.stop();
       this.stream.getTracks().forEach((track) => track.stop());
       await waitForEvent(this.recorder, "stop");
+      console.log("Frames: ", this.frames)
       return new Blob(this.chunks, {type: "video/mp4"});
   
     }

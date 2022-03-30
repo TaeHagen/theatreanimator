@@ -29,6 +29,10 @@ export class Path {
         return Math.sqrt(Math.abs(x2-x1)**2 + Math.abs(y2-y1)**2);
     }
 
+	isPointInPath(x: number, y: number) {
+		return this.points.some(p => this.findDist(PointUtils.parsePointX(p), x, PointUtils.parsePointY(p), y) <= PointUtils.parseBrushSize(p));
+	}
+
 	applyKeyframesForPoint(point: number) {
 		this.effectivePointsPerSeconds = this.pointsPerSecond;
 		this.keyframes.filter(k => PointUtils.parsePointTime(k.point) <= point).map(k => k.apply(this));
