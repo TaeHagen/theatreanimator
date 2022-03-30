@@ -10,6 +10,7 @@ export class PaintingViewPrinter {
     painting: Painting
     image: CanvasImageSource
     doneImage: CanvasImageSource
+    backgroundImage: CanvasImageSource
 
     allPointsCanvas: HTMLCanvasElement;
 
@@ -44,6 +45,8 @@ export class PaintingViewPrinter {
             ctx.clip();
             ctx.fillStyle = this.painting.backgroundColor;
             ctx.fillRect(0, 0, canvas.width, canvas.height)
+            if (this.backgroundImage != null)
+                this.ctx.drawImage(this.backgroundImage, 0, 0);
             ctx.drawImage(this.image, 0, 0);
             ctx.restore();
         }
@@ -80,6 +83,8 @@ export class PaintingViewPrinter {
             this.ctx.clip();
             this.ctx.fillStyle = this.painting.backgroundColor;
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
+            if (this.backgroundImage != null)
+                this.ctx.drawImage(this.backgroundImage, 0, 0);
             this.ctx.drawImage(this.image, 0, 0);
             this.ctx.restore();
         }
@@ -135,6 +140,8 @@ export class PaintingViewPrinter {
         if (canvas) {
             this.ctx.fillStyle = this.painting.backgroundColor;
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            if (this.backgroundImage != null)
+                this.ctx.drawImage(this.backgroundImage, 0, 0);
         }
         this.totalPoints = this.painting.paths.reduce((prev, curr) => prev + curr.points.length, 0);
         this.pathProgress.clear();

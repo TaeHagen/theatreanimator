@@ -51,6 +51,12 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 			createImageBitmap(currentDoneFile).then(i => previewPrinter.doneImage = i)
 	}
 
+	let currentBackgroundFile: File;
+	$: {
+		if (currentBackgroundFile != null)
+			createImageBitmap(currentBackgroundFile).then(i => previewPrinter.backgroundImage = i)
+	}
+
 	const chooseFirstPath = () => {
 		if (painting.paths.length > 0) {
 			currentPath = painting.paths[0];
@@ -176,7 +182,12 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 					readFileBin(f => {
 						currentDoneFile = f;
 					})
-				}} title="Open image"><span class="material-icons">verified</span></button>
+				}} title="Open final fade image"><span class="material-icons">verified</span></button>
+				<button on:click={() => {
+					readFileBin(f => {
+						currentBackgroundFile = f;
+					})
+				}} title="Open background image"><span class="material-icons">wallpaper</span></button>
 				<button on:click={() => {
 					var json = JSON.stringify(painting.flatten()),
 					blob = new Blob([json], {type: "octet/stream"})
@@ -311,7 +322,7 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 		opacity: 0.5;
 	}
 	.sidebar {
-		max-width: 400px;
+		max-width: 450px;
 		background-color: #4d4d4d;
 		padding: 10px;
 		display: flex;
