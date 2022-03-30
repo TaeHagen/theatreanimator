@@ -8,7 +8,7 @@ import { PaintingKeyframe } from "./PaintingKeyframe";
 import { PaintingViewPrinter } from "./PaintingViewPrinter";
 import type { Path } from "./Path";
 import { PathCreatePrinter } from "./PathCreatePrinter";
-import { asAny, getPixelsOnLine, readFile, readFileBin, saveData } from "./utils";
+import { asAny, getPixelsOnLine, readFile, readFileBin, saveData, Tools } from "./utils";
 import { PointUtils } from "./Point";
 import PointView from "./PointView.svelte";
 import { FrameByFrameCanvasRecorder } from "./recorder";
@@ -45,6 +45,12 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 		}
 	}
 
+	let currentDoneFile: File;
+	$: {
+		if (currentDoneFile != null)
+			createImageBitmap(currentDoneFile).then(i => previewPrinter.doneImage = i)
+	}
+
 	const chooseFirstPath = () => {
 		if (painting.paths.length > 0) {
 			currentPath = painting.paths[0];
@@ -57,7 +63,7 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 
 	let strokeWidth = 10;
 
-	let erasing = false;
+	let tool = Tools.PAINT;
 
 	let name: string = "";
 
@@ -77,15 +83,15 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 	let mouseY = 0;
 
 	const mouseMove = (e) => {
-		if (currentPath == null) {
-			return;
-		}
 		let rect = canvas.getBoundingClientRect();
 		mouseX = e.clientX - rect.left;
 		mouseY = e.clientY - rect.top;
+		if (currentPath == null) {
+			return;
+		}
 		if (e.buttons != 0) {
 			if (lastX != null) {
-				getPixelsOnLine(lastX, lastY, mouseX, mouseY, (x1, y1) => erasing ? currentPath.eraseRadius(x1, y1, strokeWidth) : currentPath.addPoint(x1, y1, strokeWidth));
+				getPixelsOnLine(lastX, lastY, mouseX, mouseY, (x1, y1) => tool == Tools.ERASE ? currentPath.eraseRadius(x1, y1, strokeWidth) : currentPath.addPoint(x1, y1, strokeWidth));
 			}
 			lastX = mouseX;
 			lastY = mouseY;
@@ -136,7 +142,7 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 					<button on:click={() => {
 						previewPrinter.prepare();
 						lastFrame = -1;
-						const nextFrame = () => animationFrame = window.requestAnimationFrame(t => {
+						const nextFrame = () => animationFrame = window.requestAnimationFrame(async t => {
 							if (lastFrame != -1) {
 								if (previewPrinter.drawNextFrame((t - lastFrame) / 1000)) {
 									nextFrame()
@@ -167,6 +173,11 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 					});
 				}} title="Open image"><span class="material-icons">image</span></button>
 				<button on:click={() => {
+					readFileBin(f => {
+						currentDoneFile = f;
+					})
+				}} title="Open image"><span class="material-icons">verified</span></button>
+				<button on:click={() => {
 					var json = JSON.stringify(painting.flatten()),
 					blob = new Blob([json], {type: "octet/stream"})
 					saveFile(blob, downloadName())
@@ -188,11 +199,14 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 					}
 				}} title="Clear all layers"><span class="material-icons">layers_clear</span></button>
 				<button on:click={() => {
-					erasing = false;
-				}} class={!erasing ? "selected" : ""}><span class="material-icons">brush</span></button>
+					tool = Tools.PAINT;
+				}} class={tool == Tools.PAINT ? "selected" : ""}><span class="material-icons">brush</span></button>
 				<button on:click={() => {
-					erasing = true;
-				}} title="Erase" class={erasing ? "selected" : ""}><span class="material-icons">clear</span></button>
+					tool = Tools.ERASE;
+				}} title="Erase" class={tool == Tools.ERASE ? "selected" : ""}><span class="material-icons">clear</span></button>
+				<button on:click={() => {
+					tool = Tools.SELECT
+				}} title="Select" class={tool == Tools.SELECT ? "selected" : ""}><span class="material-icons">adjust</span></button>
 				<button on:click={async () => {
 					const fps = 60;
 					const recorder = new FrameByFrameCanvasRecorder(previewCanvas, fps);
@@ -244,6 +258,10 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 			<input type="range" min="1" max="20" bind:value={strokeWidth} />
 			<span class="miniheader">Background color</span>
 			<input type="color" bind:value={painting.backgroundColor} />
+			<span class="miniheader">Desired time</span>
+			<input type="number" bind:value={painting.desiredTime} />
+			<span class="miniheader">Fade time</span>
+			<input type="number" bind:value={painting.fadeTime} />
 		</div>
 	</div>
 	<div class="imagesContainer">
@@ -254,7 +272,15 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 				imageWidth = image.width;
 				imageHeight = image.height;
 			}} style="background-color: {painting.backgroundColor}" />
-			<canvas width={imageWidth} height={imageHeight} bind:this={canvas} on:mousemove={mouseMove} on:wheel={e => {
+			<canvas width={imageWidth} height={imageHeight} bind:this={canvas} on:mousemove={mouseMove} on:click={e => {
+				let rect = canvas.getBoundingClientRect();
+				mouseX = e.clientX - rect.left;
+				mouseY = e.clientY - rect.top;
+				if (tool == Tools.SELECT) {
+					currentPath = painting.findPathAtPoint(mouseX, mouseY);
+					return;
+				}
+			}} on:wheel={e => {
 				strokeWidth += e.deltaY > 0 ? -1 : 1;
 				e.preventDefault()
 			}} />
@@ -285,7 +311,7 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 		opacity: 0.5;
 	}
 	.sidebar {
-		max-width: 350px;
+		max-width: 400px;
 		background-color: #4d4d4d;
 		padding: 10px;
 		display: flex;
