@@ -258,7 +258,7 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 				<span class="miniheader">Start delay (ms)</span>
 				<input type="number" bind:value={currentPath.delay} /><br>
 				<span class="miniheader">Perfect Rendering</span>
-				<input type="checkbox" bind:value={currentPath.perfectRendering} /><br>
+				<input type="checkbox" bind:checked={currentPath.perfectRendering} /><br>
 				<button on:click={() => {
 					painting.paths.splice(painting.paths.indexOf(currentPath), 1)
 					currentPath = null;
