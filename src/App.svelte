@@ -258,7 +258,7 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 				<span class="miniheader">Start delay (ms)</span>
 				<input type="number" bind:value={currentPath.delay} /><br>
 				<span class="miniheader">Perfect Rendering</span>
-				<input type="checkbox" bind:value={currentPath.perfectRendering} />
+				<input type="checkbox" bind:value={currentPath.perfectRendering} /><br>
 				<button on:click={() => {
 					painting.paths.splice(painting.paths.indexOf(currentPath), 1)
 					currentPath = null;
@@ -340,6 +340,10 @@ import { FrameByFrameCanvasRecorder } from "./recorder";
 	}
 	.sidebar input {
 		width: 100%;
+	}
+	input[type='checkbox'] {
+		width: auto;
+		margin-left: 5px;
 	}
 
 	input[type='range']::-webkit-slider-runnable-track {
