@@ -112,11 +112,15 @@ export class PaintingViewPrinter {
     countTime(fps: number): number {
         const secPerFrame = 1/fps;
         this.prepare(0, undefined, false);
+        let oldSecSinceStart = this.secSinceStart;
+        this.secSinceStart = 0;
         let time = 0;
         while (!this.allDrawn()) {
             this.pointsForPaths(secPerFrame);
             time += secPerFrame;
+            this.secSinceStart += secPerFrame;
         }
+        this.secSinceStart = oldSecSinceStart;
         return time;
     }
 
